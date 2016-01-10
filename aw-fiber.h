@@ -126,5 +126,9 @@ static inline void fiber_init(struct fiber *fib) {
 		(to)->state = FIBER_READY; \
 	} while (0)
 
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
 #endif /* AW_FIBER_H */
 
