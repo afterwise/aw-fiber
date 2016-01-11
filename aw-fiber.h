@@ -30,8 +30,6 @@
   Adam Dunkels' Protothreads: http://dunkels.com/adam/pt/index.html
  */
 
-#include "aw-list.h"
-
 #if !_MSC_VER || _MSC_VER >= 1800
 # include <stdbool.h>
 #endif
@@ -39,6 +37,12 @@
 # include <stdint.h>
 #endif
 #include <stddef.h>
+
+#if __GNUC__
+# define _fiber_alwaysinline inline __attribute__((always_inline))
+#elif _MSC_VER
+# define _fiber_alwaysinline __forceinline
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,16 +85,42 @@ enum {
 
 typedef uintptr_t fibermsg_t;
 
+struct fiberlist {
+	struct fiberlist *prev;
+	struct fiberlist *next;
+};
+
 struct fiber {
-	struct list link;
-	struct list inbox;
+	struct fiberlist elem;
+	struct fiberlist inbox;
 	fibermsg_t message;
 	coroutine_t coroutine;
 	unsigned char state;
 };
 
-static inline void fiber_init(struct fiber *fib) {
-	list_init(&fib->inbox);
+static _fiber_alwaysinline void fiberlist_init(struct fiberlist *list) {
+	list->prev = list;
+	list->next = list;
+}
+
+static _fiber_alwaysinline bool fiberlist_empty(struct fiberlist *list) {
+	return list->next == list;
+}
+
+static _fiber_alwaysinline void fiberlist_add_back(struct fiberlist *list, struct fiberlist *elem) {
+	elem->next = list;
+	elem->prev = list->prev;
+	list->prev->next = elem;
+	list->prev = elem;
+}
+
+static _fiber_alwaysinline void fiberlist_remove(struct fiberlist *elem) {
+	elem->next->prev = elem->prev;
+	elem->prev->next = elem->next;
+}
+
+static _fiber_alwaysinline void fiber_init(struct fiber *fib) {
+	fiberlist_init(&fib->inbox);
 	fib->message = 0;
 	fib->coroutine = 0;
 	fib->state = FIBER_READY;
@@ -104,7 +134,7 @@ static inline void fiber_init(struct fiber *fib) {
 #define fiber_send(fib,to,msg,reply,...) do { \
 		(fib)->message = (msg); \
 		(fib)->state = FIBER_SEND; \
-		list_add_back(&(to)->inbox, &(fib)->link); \
+		fiberlist_add_back(&(to)->inbox, &(fib)->elem); \
 		coroutine_cond_yield((fib)->coroutine, (fib)->state != FIBER_READY, __VA_ARGS__); \
 		*(reply) = (fib)->message; \
 		(fib)->message = 0; \
@@ -112,12 +142,12 @@ static inline void fiber_init(struct fiber *fib) {
 
 #define fiber_receive(fib,from,msg,...) do { \
 		(fib)->state = FIBER_RECEIVE; \
-		coroutine_cond_yield((fib)->coroutine, list_empty(&(fib)->inbox), __VA_ARGS__); \
+		coroutine_cond_yield((fib)->coroutine, fiberlist_empty(&(fib)->inbox), __VA_ARGS__); \
 		(fib)->state = FIBER_READY; \
 		*(from) = (struct fiber *) (fib)->inbox.next; \
 		*(msg) = ((struct fiber *) (fib)->inbox.next)->message; \
 		((struct fiber *) (fib)->inbox.next)->state = FIBER_REPLY; \
-		list_remove((fib)->inbox.next); \
+		fiberlist_remove((fib)->inbox.next); \
 	} while (0)
 
 #define fiber_reply(fib,to,msg,...) do { \
