@@ -1,5 +1,4 @@
 
 REQUIRES = \
-	../extern/aw-fiber \
-	../extern/aw-list
+	../extern/aw-fiber
 
