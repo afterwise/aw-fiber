@@ -98,32 +98,37 @@ struct fiber {
 	unsigned char state;
 };
 
-static _fiber_alwaysinline void fiberlist_init(struct fiberlist *list) {
+_fiber_alwaysinline void fiberlist_init(struct fiberlist *list) {
 	list->prev = list;
 	list->next = list;
 }
 
-static _fiber_alwaysinline bool fiberlist_empty(struct fiberlist *list) {
+_fiber_alwaysinline bool fiberlist_empty(struct fiberlist *list) {
 	return list->next == list;
 }
 
-static _fiber_alwaysinline void fiberlist_add_back(struct fiberlist *list, struct fiberlist *elem) {
+_fiber_alwaysinline void fiberlist_add_back(struct fiberlist *list, struct fiberlist *elem) {
 	elem->next = list;
 	elem->prev = list->prev;
 	list->prev->next = elem;
 	list->prev = elem;
 }
 
-static _fiber_alwaysinline void fiberlist_remove(struct fiberlist *elem) {
+_fiber_alwaysinline void fiberlist_remove(struct fiberlist *elem) {
 	elem->next->prev = elem->prev;
 	elem->prev->next = elem->next;
 }
 
-static _fiber_alwaysinline void fiber_init(struct fiber *fib) {
+_fiber_alwaysinline void fiber_init(struct fiber *fib) {
 	fiberlist_init(&fib->inbox);
 	fib->message = 0;
 	fib->coroutine = 0;
 	fib->state = FIBER_READY;
+}
+
+_fiber_alwaysinline bool fiber_ready(struct fiber *fib) {
+	return fib->state == FIBER_READY ||
+		(fib->state == FIBER_RECEIVE && !fiberlist_empty(&fib->inbox));
 }
 
 #define fiber_begin(fib) coroutine_begin((fib)->coroutine)

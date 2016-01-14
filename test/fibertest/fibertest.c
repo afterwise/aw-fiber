@@ -1,6 +1,7 @@
 
 #include "aw-fiber.h"
 #include <stdio.h>
+#include <string.h>
 
 enum {
 	STATUS_OK,
@@ -14,12 +15,13 @@ struct task {
 	struct fiber self;
 	struct fiber *peer;
 	const char *name;
+	int (*func)(struct task *task);
 };
 
 int task_a(struct task *task) {
 	fibermsg_t msg;
 
-	printf("%s was scheduled (%d co=%d)\n", task->name, task->self.state, task->self.coroutine);
+	printf("%s was scheduled (%d:%d)\n", task->name, task->self.state, task->self.coroutine);
 	fiber_begin(&task->self);
 
 	printf("%s will wait to receive\n", task->name);
@@ -39,7 +41,7 @@ int task_a(struct task *task) {
 int task_b(struct task *task) {
 	fibermsg_t reply;
 
-	printf("%s was scheduled (%d co=%d)\n", task->name, task->self.state, task->self.coroutine);
+	printf("%s was scheduled (%d:%d)\n", task->name, task->self.state, task->self.coroutine);
 	fiber_begin(&task->self);
 
 	printf("%s will send\n", task->name);
@@ -56,18 +58,26 @@ int main(int argc, char *argv[]) {
 	(void) argc;
 	(void) argv;
 
-	struct task a, b;
+	struct task t[2];
+	bool loop;
 
-	fiber_init(&a.self);
-	a.name = "Dick";
+	memset(t, 0, sizeof t);
 
-	fiber_init(&b.self);
-	b.name = "Jane";
-	b.peer = &a.self;
+	fiber_init(&t[0].self);
+	t[0].name = "Dick";
+	t[0].func = task_a;
 
-	do ; while (
-		task_a(&a) == STATUS_WAIT |
-		task_b(&b) == STATUS_WAIT);
+	fiber_init(&t[1].self);
+	t[1].name = "Jane";
+	t[1].peer = &t[0].self;
+	t[1].func = task_b;
+
+	do {
+		loop = false;
+		for (int i = 0; i < 2; ++i)
+			if (fiber_ready(&t[i].self))
+				loop |= (t[i].func(&t[i]) == STATUS_WAIT);
+	} while (loop);
 
 	printf("All done\n");
 	return 0;
