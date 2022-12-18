@@ -3,6 +3,37 @@
 #include <stdio.h>
 #include <string.h>
 
+// test_yield:
+
+struct co_state {
+	coroutine_t co;
+	unsigned long long cnt;
+};
+
+int co_main(struct co_state *cs) {
+	coroutine_begin(cs->co);
+	coroutine_cond_yield(cs->co, ++cs->cnt < 750000000/2, 1);
+	coroutine_end(cs->co);
+	return 0;
+}
+
+void test_yield() {
+	struct co_state co[2];
+	memset(co, 0, sizeof co);
+
+	int loop;
+	do {
+		loop = 0;
+		for (int i = 0; i < 2; ++i)
+			loop |= co_main(&co[i]);
+	} while (loop != 0);
+
+	printf("%llu\n", co[0].cnt);
+	printf("%llu\n", co[1].cnt);
+}
+
+// test_fiber:
+
 enum {
 	STATUS_OK,
 	STATUS_WAIT
@@ -51,13 +82,11 @@ int task_b(struct task *task) {
 
 	fiber_end(&task->self);
 	printf("%s is dead\n", task->name);
+
 	return STATUS_OK;
 }
 
-int main(int argc, char *argv[]) {
-	(void) argc;
-	(void) argv;
-
+void test_fiber() {
 	struct task t[2];
 	bool loop;
 
@@ -78,6 +107,18 @@ int main(int argc, char *argv[]) {
 			if (fiber_ready(&t[i].self))
 				loop |= (t[i].func(&t[i]) == STATUS_WAIT);
 	} while (loop);
+}
+
+int main(int argc, char *argv[]) {
+	(void) argc;
+	(void) argv;
+
+	printf("test_yield:\n");
+	test_yield();
+
+	printf("test_fiber:\n");
+	test_fiber();
+
 
 	printf("All done\n");
 	return 0;

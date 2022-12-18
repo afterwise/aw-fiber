@@ -1,6 +1,6 @@
-
+/* vim: set ts=4 sw=4 noet : */
 /*
-   Copyright (c) 2016 Malte Hildingsson, malte (at) afterwi.se
+   Copyright (c) 2016-2022 Malte Hildingsson, malte (at) afterwi.se
 
    Permission is hereby granted, free of charge, to any person obtaining a copy
    of this software and associated documentation files (the "Software"), to deal
@@ -98,40 +98,47 @@ struct fiber {
 	unsigned char state;
 };
 
-_fiber_alwaysinline void fiberlist_init(struct fiberlist *list) {
+_fiber_alwaysinline
+static void fiberlist_init(struct fiberlist *list) {
 	list->prev = list;
 	list->next = list;
 }
 
-_fiber_alwaysinline bool fiberlist_empty(struct fiberlist *list) {
+_fiber_alwaysinline
+static bool fiberlist_empty(struct fiberlist *list) {
 	return list->next == list;
 }
 
-_fiber_alwaysinline void fiberlist_add_back(struct fiberlist *list, struct fiberlist *elem) {
+_fiber_alwaysinline
+static void fiberlist_add_back(struct fiberlist *list, struct fiberlist *elem) {
 	elem->next = list;
 	elem->prev = list->prev;
 	list->prev->next = elem;
 	list->prev = elem;
 }
 
-_fiber_alwaysinline void fiberlist_remove(struct fiberlist *elem) {
+_fiber_alwaysinline
+static void fiberlist_remove(struct fiberlist *elem) {
 	elem->next->prev = elem->prev;
 	elem->prev->next = elem->next;
 }
 
-_fiber_alwaysinline void fiber_init(struct fiber *fib) {
+_fiber_alwaysinline
+static void fiber_init(struct fiber *fib) {
 	fiberlist_init(&fib->inbox);
 	fib->message = 0;
 	fib->coroutine = 0;
 	fib->state = FIBER_READY;
 }
 
-_fiber_alwaysinline bool fiber_ready(struct fiber *fib) {
+_fiber_alwaysinline
+static bool fiber_ready(struct fiber *fib) {
 	return fib->state == FIBER_READY ||
 		(fib->state == FIBER_RECEIVE && !fiberlist_empty(&fib->inbox));
 }
 
 #define fiber_begin(fib) coroutine_begin((fib)->coroutine)
+
 #define fiber_end(fib) \
 	coroutine_end((fib)->coroutine); \
 	do { (fib)->state = FIBER_DEAD; } while (0)
