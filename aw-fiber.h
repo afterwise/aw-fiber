@@ -28,6 +28,14 @@
   Inspired by:
   Simon Tatham's Coroutines in C: http://www.chiark.greenend.org.uk/~sgtatham/coroutines.html
   Adam Dunkels' Protothreads: http://dunkels.com/adam/pt/index.html
+
+  Resume points are case labels in a switch around the coroutine body, so:
+  - local variables are not kept across a yield; keep state in a struct,
+  - a yield must not be placed inside a switch of your own, as its label
+    would belong to that switch and the coroutine would never resume there.
+
+  Each fiber_send needs a matching fiber_receive and fiber_reply. Sending
+  to a fiber that has ended, or that ends without receiving, replies 0.
  */
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1800
