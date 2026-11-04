@@ -30,17 +30,17 @@
   Adam Dunkels' Protothreads: http://dunkels.com/adam/pt/index.html
  */
 
-#if !_MSC_VER || _MSC_VER >= 1800
+#if !defined(_MSC_VER) || _MSC_VER >= 1800
 # include <stdbool.h>
 #endif
-#if !_MSC_VER || _MSC_VER >= 1600
+#if !defined(_MSC_VER) || _MSC_VER >= 1600
 # include <stdint.h>
 #endif
 #include <stddef.h>
 
-#if __GNUC__
+#if defined(__GNUC__)
 # define _fiber_alwaysinline inline __attribute__((always_inline))
-#elif _MSC_VER
+#elif defined(_MSC_VER)
 # define _fiber_alwaysinline __forceinline
 #endif
 
