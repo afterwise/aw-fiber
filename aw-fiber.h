@@ -148,16 +148,36 @@ static bool fiber_ready(struct fiber *fib) {
 		(fib->state == FIBER_RECEIVE && !fiberlist_empty(&fib->inbox));
 }
 
+/* fibers still waiting to send to a fiber that ends get a reply of 0 */
+_fiber_alwaysinline
+static void _fiber_end(struct fiber *fib) {
+	struct fiber *from;
+
+	fib->state = FIBER_DEAD;
+
+	while (!fiberlist_empty(&fib->inbox)) {
+		from = (struct fiber *) fib->inbox.next;
+		fiberlist_remove(&from->elem);
+		from->message = 0;
+		from->state = FIBER_READY;
+	}
+}
+
 #define fiber_begin(fib) coroutine_begin((fib)->coroutine)
 
 #define fiber_end(fib) \
 	coroutine_end((fib)->coroutine); \
-	do { (fib)->state = FIBER_DEAD; } while (0)
+	do { _fiber_end(fib); } while (0)
 
 #define fiber_send(fib,to,msg,reply,...) do { \
 		(fib)->message = (msg); \
 		(fib)->state = FIBER_SEND; \
-		fiberlist_add_back(&(to)->inbox, &(fib)->elem); \
+		if ((to)->state != FIBER_DEAD) \
+			fiberlist_add_back(&(to)->inbox, &(fib)->elem); \
+		else { \
+			(fib)->message = 0; \
+			(fib)->state = FIBER_READY; \
+		} \
 		coroutine_cond_yield((fib)->coroutine, (fib)->state != FIBER_READY, __VA_ARGS__); \
 		*(reply) = (fib)->message; \
 		(fib)->message = 0; \
