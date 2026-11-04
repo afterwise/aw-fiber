@@ -64,9 +64,21 @@ typedef unsigned int coroutine_t;
 # define _coroutine_label __LINE__
 #endif
 
+#if defined(__cplusplus) && (__cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L))
+# define _coroutine_fallthrough [[fallthrough]]
+#elif defined(__has_attribute)
+# if __has_attribute(fallthrough)
+#  define _coroutine_fallthrough __attribute__((fallthrough))
+# endif
+#endif
+#ifndef _coroutine_fallthrough
+# define _coroutine_fallthrough ((void) 0)
+#endif
+
 #define coroutine_end(co) _coroutine_end(co, _coroutine_label)
 #define _coroutine_end(co,label) \
 		(co) = (label); \
+		_coroutine_fallthrough; \
 		case (label):; \
 	}
 
@@ -80,6 +92,7 @@ typedef unsigned int coroutine_t;
 #define coroutine_cond_yield(co,cond,...) _coroutine_cond_yield(co, _coroutine_label, cond, __VA_ARGS__)
 #define _coroutine_cond_yield(co,label,cond,...) do { \
 		(co) = (label); \
+		_coroutine_fallthrough; \
 		case (label):; \
 		if (cond) return __VA_ARGS__; \
 	} while (0)
