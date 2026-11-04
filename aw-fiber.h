@@ -50,7 +50,7 @@ extern "C" {
 
 /* Low-level coroutine api */
 
-typedef unsigned short coroutine_t;
+typedef unsigned int coroutine_t;
 
 #define coroutine_begin(co) \
 	switch (co) { \
