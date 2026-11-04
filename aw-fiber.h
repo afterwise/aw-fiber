@@ -1,6 +1,6 @@
 /* vim: set ts=4 sw=4 noet : */
 /*
-   Copyright (c) 2016-2022 Malte Hildingsson, malte (at) afterwi.se
+   Copyright (c) 2016-2026 Malte Hildingsson, malte (at) afterwi.se
 
    Permission is hereby granted, free of charge, to any person obtaining a copy
    of this software and associated documentation files (the "Software"), to deal
