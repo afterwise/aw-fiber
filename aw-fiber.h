@@ -56,20 +56,31 @@ typedef unsigned int coroutine_t;
 	switch (co) { \
 	case 0:
 
-#define coroutine_end(co) \
-		(co) = __LINE__; \
-		case __LINE__:; \
+/* __COUNTER__ gives each resume point its own label, and unlike __LINE__
+   it is still a constant when MSVC compiles with /ZI */
+#if defined(__COUNTER__)
+# define _coroutine_label (__COUNTER__ + 1)
+#else
+# define _coroutine_label __LINE__
+#endif
+
+#define coroutine_end(co) _coroutine_end(co, _coroutine_label)
+#define _coroutine_end(co,label) \
+		(co) = (label); \
+		case (label):; \
 	}
 
-#define coroutine_yield(co,...) do { \
-		(co) = __LINE__; \
+#define coroutine_yield(co,...) _coroutine_yield(co, _coroutine_label, __VA_ARGS__)
+#define _coroutine_yield(co,label,...) do { \
+		(co) = (label); \
 		return __VA_ARGS__; \
-		case __LINE__:; \
+		case (label):; \
 	} while (0)
 
-#define coroutine_cond_yield(co,cond,...) do { \
-		(co) = __LINE__; \
-		case __LINE__:; \
+#define coroutine_cond_yield(co,cond,...) _coroutine_cond_yield(co, _coroutine_label, cond, __VA_ARGS__)
+#define _coroutine_cond_yield(co,label,cond,...) do { \
+		(co) = (label); \
+		case (label):; \
 		if (cond) return __VA_ARGS__; \
 	} while (0)
 
